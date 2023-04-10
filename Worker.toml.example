@@ -1,0 +1,26 @@
+bridge_version = 20
+bridge_agent = "AI Horde Worker:20:https://github.com/db0/AI-Horde-Worker"
+horde_url = "https://stablehorde.net"
+
+[payload]
+name = "NAME"
+max_pixels = 331776
+threads = 2
+priority_usernames = []
+nsfw = true
+blacklist = []
+models = ["Deliberate", "Anything Diffusion"]
+allow_img2img = true
+allow_inpainting = true
+allow_unsafe_ip = true
+allow_post_processing = true
+allow_controlnet = false
+require_upfront_kudos = false
+
+[gen_info]
+key = "APIKEY"
+proxy = "socks5://127.0.0.1:9050" # SOCKS5
+
+[rec_info]
+key = "APIKEY"
+proxy = "socks5://127.0.0.1:9050" # SOCKS5
