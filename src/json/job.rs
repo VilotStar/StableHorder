@@ -15,7 +15,7 @@ pub struct Root {
     #[serde(rename = "source_mask")]
     pub source_mask: Option<String>,
     #[serde(rename = "r2_upload")]
-    pub r2_upload: String,
+    pub r2_upload: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

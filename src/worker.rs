@@ -1,14 +1,20 @@
-use reqwest::{header::HeaderMap, Proxy, Response, Client};
+use reqwest::{Client, Error};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use crate::json;
 
-#[derive(Debug, Deserialize)]
+use crate::json;
+type JobJson = json::job::Root;
+type GenerateJson = json::generate::Root;
+type StatusJson = json::status::Root;
+
+#[derive(Debug)]
 pub enum WorkerErr {
     FileRead,
     TomlParse,
     InvalidProxy,
-    ClientCreation
+    ClientCreation,
+    Request(Error),
+    JsonParse(Error)
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -103,22 +109,56 @@ impl Worker {
         Ok((rec_client, gen_client))
     }
 
-    pub async fn request_img(self, payload: &json::generate::Root) -> String {
-        let url = format!("{}/api/v2/generate/async", &self.data.horde_url);
-        let res = (&(self.gen_client)).post(url)
-            .header("apikey", &self.data.gen_info.key)
-            .json(payload)
-            .send().await.unwrap();
-        let json: Value = res.json().await.unwrap();
-        json["id"].to_string()
+    pub async fn get_img(&self, id: String) -> Result<StatusJson, WorkerErr> {
+        let check_url = format!("{}/api/v2/generate/check/{}", &self.data.horde_url, &id);
+        loop {
+            let res = match self.gen_client.get(&check_url).send().await {
+                Ok(res) => res,
+                Err(err) => return Err(WorkerErr::Request(err))
+            };
+            let json: Value = match res.json().await {
+                Ok(val) => val,
+                Err(err) => return Err(WorkerErr::JsonParse(err))
+            };
+            let finished = json.get("finished").unwrap().to_string();
+            if finished.parse::<u8>().unwrap() == 1 {
+                break;
+            }
+        };
+        let status_url = format!("{}/api/v2/generate/status/{}", &self.data.horde_url, &id);
+        let res = match self.gen_client.get(&status_url).send().await {
+            Ok(res) => res,
+            Err(err) => return Err(WorkerErr::Request(err))
+        };
+        return match res.json().await {
+            Ok(json) =>  Ok(json),
+            Err(err) => Err(WorkerErr::JsonParse(err))
+        }
     }
 
-    pub async fn request_job(self) -> Response {
+    pub async fn request_gen(&self, payload: &GenerateJson) -> Result<String, WorkerErr> {
+        let url = format!("{}/api/v2/generate/async", &self.data.horde_url);
+        let res = match self.gen_client.post(url).header("apikey", &self.data.gen_info.key).json(payload).send().await {
+            Ok(res) => res,
+            Err(err) => return Err(WorkerErr::Request(err))
+        };
+        let json: Value = match res.json().await {
+            Ok(val) => val,
+            Err(err) => return Err(WorkerErr::JsonParse(err))
+        };
+        Ok(json.get("id").unwrap().to_string())
+    }
+
+    pub async fn request_job(&self) -> Result<JobJson, WorkerErr> {
         let url = format!("{}/api/v2/generate/pop", &self.data.horde_url);
-        self.rec_client.post(url)
-            .header("apikey", &self.data.rec_info.key)
-            .json(&self.data.payload)
-            .send().await.unwrap()
+        let res = match self.rec_client.post(url).header("apikey", &self.data.rec_info.key).json(&self.data.payload).send().await {
+            Ok(res) => res,
+            Err(err) => return Err(WorkerErr::Request(err))
+        };
+        match res.json().await {
+            Ok(json) => Ok(json),
+            Err(err) => return Err(WorkerErr::JsonParse(err))
+        }
     }
 }
 
