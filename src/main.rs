@@ -1,4 +1,4 @@
-use StableHoarder::{worker::Worker, json};
+use StableHorder::{worker::Worker, json};
 
 type JobJson = json::job::Root;
 type GenerateJson = json::generate::Root;
@@ -14,7 +14,7 @@ async fn main() {
     let payload = GenerateJson::from(job);
     println!("{:?}", payload);
 
-    let img_id = worker.request_gen(&payload).await;
+    let generation = worker.request_gen(&payload).await.unwrap();
 
 
 }

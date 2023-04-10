@@ -3,7 +3,7 @@
 version = 3
 
 [[package]]
-name = "StableHoarder"
+name = "StableHorder"
 version = "0.1.0"
 dependencies = [
  "reqwest",

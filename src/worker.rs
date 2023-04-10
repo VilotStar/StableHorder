@@ -136,7 +136,7 @@ impl Worker {
         }
     }
 
-    pub async fn request_gen(&self, payload: &GenerateJson) -> Result<String, WorkerErr> {
+    pub async fn request_gen(&self, payload: &GenerateJson) -> Result<Value, WorkerErr> {
         let url = format!("{}/api/v2/generate/async", &self.data.horde_url);
         let res = match self.gen_client.post(url).header("apikey", &self.data.gen_info.key).json(payload).send().await {
             Ok(res) => res,
@@ -146,7 +146,7 @@ impl Worker {
             Ok(val) => val,
             Err(err) => return Err(WorkerErr::JsonParse(err))
         };
-        Ok(json.get("id").unwrap().to_string())
+        Ok(json)
     }
 
     pub async fn request_job(&self) -> Result<JobJson, WorkerErr> {
